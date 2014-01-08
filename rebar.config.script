@@ -27,20 +27,64 @@ GetFlag = fun(Name, Args) ->
         end
     end,
 
-ICUCFLAGS = GetFlag("ICU_CFLAGS", "--cflags"),
-ICUCXXFLAGS = GetFlag("ICU_CXXFLAGS", "--cxxflags"),
-ICULDFLAGS = GetFlag("ICU_LDFLAGS", "--ldflags"),
-ICUINCPATH = GetFlag("ICU_INCPATH", "--cppflags-searchpath"),
+GetFlag1 = fun(Name, Default) ->
+        case os:getenv(Name) of
+            false -> Default;
+            Val -> Val
+        end
+    end,
+
+BuildStatic = os:getenv("COUCHDB_STATIC") =:= "1" andalso
+                os:getenv("USE_STATIC_ICU") =:= "1",
 
 
-PortEnv = [{port_env, [
+IsDarwin = case os:type() of
+    {unix, darwin} -> true;
+    _ -> false
+end,
+
+UseSystemIcu = IsDarwin andalso os:getenv("USE_STATIC_ICU") /= "1",
+
+PortEnv = case {UseSystemIcu, BuildStatic} of
+    {true, _} ->
+        CFLAGS = GetFlag1("ICU_CFLAGS",
+                         "-Iplatform/osx/icu -I/usr/include -fPIC"),
+        LDFLAGS = GetFlag1("ICU_LDFLAGS",
+                          "-lpthread -lm  -licucore -lstdc++ -L/usr/lib " ++
+                          "$DRV_LDFLAGS -fPIC"),
+        [
+            {"CFLAGS", "$DRV_CFLAGS " ++ CFLAGS},
+            {"LDFLAGS", LDFLAGS}
+        ];
+
+    {_, true} ->
+        CFLAGS = GetFlag("ICU_CFLAGS", "-I.libs/icu/include"),
+        LDFLAGS = GetFlag("ICU_LDFLAGS", "-lstdc++ -fPIC " ++
+                                         ".libs/icu/lib/libicui18n.a " ++
+                                         ".libs/icu/lib/libicuuc.a " ++
+                                         ".libs/icu/lib/libicudata.a"),
+        [
+            {"DRV_CFLAGS", "$DRV_CFLAGS " ++ CFLAGS ++ " -D BSD_SOURCE"},
+            {"DRV_LDFLAGS", "$DRV_LDFLAGS " ++ LDFLAGS}
+        ];
+    {_, false} ->
+        ICUCFLAGS = GetFlag("ICU_CFLAGS", "--cflags"),
+        ICUCXXFLAGS = GetFlag("ICU_CXXFLAGS", "--cxxflags"),
+        ICULDFLAGS = GetFlag("ICU_LDFLAGS", "--ldflags"),
+        ICUINCPATH = GetFlag("ICU_INCPATH", "--cppflags-searchpath"),
+
+        [
             {"CFLAGS",  ICUCFLAGS ++  " $CFLAGS " ++ ICUINCPATH},
             {"CXXFLAGS", ICUCXXFLAGS ++ " $CXXFLAGS " ++ ICUINCPATH},
-            {"LDFLAGS",  ICULDFLAGS ++ " $LDFLAGS"}]},
+            {"LDFLAGS",  ICULDFLAGS ++ " $LDFLAGS"}
+        ]
+end,
 
-           {port_specs, [
-            {filename:join(["priv", Arch, "couch_collate.so"]),
-            ["c_src/*.c"]}]}
-],
+PortInfo = [{port_env, PortEnv},
+            {port_specs, [
+                {filename:join(["priv", Arch, "couch_collate.so"]),
+                    ["c_src/*.c"]}]},
+            {pre_hooks, [{compile, "./build_icu.sh"}]},
+            {post_hooks, [{clean, "./build_icu.sh clean"}]}],
 
-lists:keymerge(1,lists:keysort(1, PortEnv), lists:keysort(1, CONFIG)).
+lists:keymerge(1,lists:keysort(1, PortInfo), lists:keysort(1, CONFIG)).
