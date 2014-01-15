@@ -58,8 +58,8 @@ PortEnv = case {UseSystemIcu, BuildStatic} of
         ];
 
     {_, true} ->
-        CFLAGS = GetFlag("ICU_CFLAGS", "-I.libs/icu/include"),
-        LDFLAGS = GetFlag("ICU_LDFLAGS", "-lstdc++ -fPIC " ++
+        CFLAGS = GetFlag1("ICU_CFLAGS", "-I.libs/icu/include"),
+        LDFLAGS = GetFlag1("ICU_LDFLAGS", "-lstdc++ -fPIC " ++
                                          ".libs/icu/lib/libicui18n.a " ++
                                          ".libs/icu/lib/libicuuc.a " ++
                                          ".libs/icu/lib/libicudata.a"),
