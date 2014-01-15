@@ -21,7 +21,7 @@ DISTDIR=$CORE_TOP/.dists
 ICU_VER=4.4.2
 ICU_DISTNAME=icu4c-4_4_2-src.tgz
 ICU_SITE=http://dl.refuge.io
-ICUDIR=$STATICLIBS/icu_src/icu
+ICUDIR=$STATICLIBS/icu
 
 
 [ "$MACHINE" ] || MACHINE=`(uname -m) 2>/dev/null` || MACHINE="unknown"
@@ -82,10 +82,10 @@ build_icu()
     rm -rf $STATICLIBS/icu*
 
     cd $STATICLIBS
-    $GUNZIP -c $DISTDIR/$ICU_DISTNAME | $TAR xf - -C $STATICLIBS/icu_src
+    $GUNZIP -c $DISTDIR/$ICU_DISTNAME | $TAR xf -
 
     # apply patches
-    cd $STATICLIBS/icu_src
+    cd $STATICLIBS/icu
     for P in $PATCHES/icu/*.patch; do \
         (patch -p0 -i $P || echo "skipping patch"); \
     done
