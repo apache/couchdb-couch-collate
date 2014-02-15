@@ -1,0 +1,4 @@
+ebin
+t/*.beam
+.dists
+.libs

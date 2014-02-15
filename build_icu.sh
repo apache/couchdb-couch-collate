@@ -85,7 +85,7 @@ build_icu()
     $GUNZIP -c $DISTDIR/$ICU_DISTNAME | $TAR xf -
 
     # apply patches
-    cd $STATICLIBS/icu
+    cd $STATICLIBS
     for P in $PATCHES/icu/*.patch; do \
         (patch -p0 -i $P || echo "skipping patch"); \
     done

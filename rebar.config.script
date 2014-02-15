@@ -37,7 +37,6 @@ GetFlag1 = fun(Name, Default) ->
 BuildStatic = os:getenv("COUCHDB_STATIC") =:= "1" andalso
                 os:getenv("USE_STATIC_ICU") =:= "1",
 
-
 IsDarwin = case os:type() of
     {unix, darwin} -> true;
     _ -> false
@@ -59,13 +58,14 @@ PortEnv = case {UseSystemIcu, BuildStatic} of
 
     {_, true} ->
         CFLAGS = GetFlag1("ICU_CFLAGS", "-I.libs/icu/include"),
-        LDFLAGS = GetFlag1("ICU_LDFLAGS", "-lstdc++ -fPIC " ++
-                                         ".libs/icu/lib/libicui18n.a " ++
-                                         ".libs/icu/lib/libicuuc.a " ++
-                                         ".libs/icu/lib/libicudata.a"),
+        LDFLAGS = GetFlag1("ICU_LDFLAGS", ".libs/icu/lib/libicui18n.a " ++
+                                          ".libs/icu/lib/libicuuc.a " ++
+                                          ".libs/icu/lib/libicudata.a"),
         [
-            {"DRV_CFLAGS", "$DRV_CFLAGS " ++ CFLAGS ++ " -D BSD_SOURCE"},
-            {"DRV_LDFLAGS", "$DRV_LDFLAGS " ++ LDFLAGS}
+            {"DRV_CFLAGS", "$DRV_CFLAGS " ++ CFLAGS},
+            {"DRV_LDFLAGS", "-lstdc++ -fPIC $DRV_LDFLAGS " ++ LDFLAGS},
+            {"CFLAGS", "$DRV_CFLAGS " ++ CFLAGS},
+            {"LDFLAGS", "-lstdc++ -fPIC $DRV_LDFLAGS " ++ LDFLAGS}
         ];
     {_, false} ->
         ICUCFLAGS = GetFlag("ICU_CFLAGS", "--cflags"),

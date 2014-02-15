@@ -31,12 +31,8 @@ init() ->
     end,
     NumScheds = erlang:system_info(schedulers),
     Arch = erlang:system_info(system_architecture),
-    (catch erlang:load_nif(filename:join([PrivDir, Arch, ?MODULE]),
-                           NumScheds)),
-    case erlang:system_info(otp_release) of
-        "R13B03" -> true;
-        _ -> ok
-    end.
+    SoPath = filename:join([PrivDir, Arch, ?MODULE]),
+    erlang:load_nif(SoPath, NumScheds).
 
 %% @doc compare 2 string, result is -1 for lt, 0 for eq and 1 for gt.
 -spec collate(binary(), binary()) -> 0 | -1 | 1.
