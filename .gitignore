@@ -2,3 +2,6 @@ ebin
 t/*.beam
 .dists
 .libs
+*.pdb
+*~
+priv

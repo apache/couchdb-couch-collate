@@ -20,7 +20,7 @@ DISTDIR=$CORE_TOP/.dists
 # icu sources
 ICU_VER=4.4.2
 ICU_DISTNAME=icu4c-4_4_2-src.tgz
-ICU_SITE=http://dl.refuge.io
+ICU_SITE=http://download.icu-project.org/files/icu4c/4.4.2
 ICUDIR=$STATICLIBS/icu
 
 

@@ -42,10 +42,15 @@ IsDarwin = case os:type() of
     _ -> false
 end,
 
+IsWindows = case os:type() of
+    {win32, nt} -> true;
+    _ -> false
+end,
+
 UseSystemIcu = IsDarwin andalso os:getenv("USE_STATIC_ICU") /= "1",
 
-PortEnv = case {UseSystemIcu, BuildStatic} of
-    {true, _} ->
+PortEnv = case {UseSystemIcu, BuildStatic, IsWindows} of
+    {true, _, false} ->
         CFLAGS = GetFlag1("ICU_CFLAGS",
                          "-Iplatform/osx/icu -I/usr/include -fPIC"),
         LDFLAGS = GetFlag1("ICU_LDFLAGS",
@@ -55,8 +60,7 @@ PortEnv = case {UseSystemIcu, BuildStatic} of
             {"CFLAGS", "$DRV_CFLAGS " ++ CFLAGS},
             {"LDFLAGS", LDFLAGS}
         ];
-
-    {_, true} ->
+    {_, true, false} ->
         CFLAGS = GetFlag1("ICU_CFLAGS", "-I.libs/icu/include"),
         LDFLAGS = GetFlag1("ICU_LDFLAGS", ".libs/icu/lib/libicui18n.a " ++
                                           ".libs/icu/lib/libicuuc.a " ++
@@ -67,12 +71,26 @@ PortEnv = case {UseSystemIcu, BuildStatic} of
             {"CFLAGS", "$DRV_CFLAGS " ++ CFLAGS},
             {"LDFLAGS", "-lstdc++ -fPIC $DRV_LDFLAGS " ++ LDFLAGS}
         ];
-    {_, false} ->
+    {_, true, true} ->
+        throw("Static builds not supported on Windows.");
+    {_, false, false} ->
         ICUCFLAGS = GetFlag("ICU_CFLAGS", "--cflags"),
         ICUCXXFLAGS = GetFlag("ICU_CXXFLAGS", "--cxxflags"),
         ICULDFLAGS = GetFlag("ICU_LDFLAGS", "--ldflags"),
         ICUINCPATH = GetFlag("ICU_INCPATH", "--cppflags-searchpath"),
 
+        [
+            {"CFLAGS",  ICUCFLAGS ++  " $CFLAGS " ++ ICUINCPATH},
+            {"CXXFLAGS", ICUCXXFLAGS ++ " $CXXFLAGS " ++ ICUINCPATH},
+            {"LDFLAGS",  ICULDFLAGS ++ " $LDFLAGS"}
+        ];
+    {_, false, true} ->
+        ICUCFLAGS = "",
+        ICUCXXFLAGS = "",
+        ICUINCPATH = "/I.libs\\icu\\include",
+        ICULDFLAGS = ".libs\\icu\\lib\\icuin.lib " ++
+                ".libs\\icu\\lib\\icuuc.lib " ++
+                ".libs\\icu\\lib\\icudt.lib",
         [
             {"CFLAGS",  ICUCFLAGS ++  " $CFLAGS " ++ ICUINCPATH},
             {"CXXFLAGS", ICUCXXFLAGS ++ " $CXXFLAGS " ++ ICUINCPATH},
@@ -84,7 +102,18 @@ PortInfo = [{port_env, PortEnv},
             {port_specs, [
                 {filename:join(["priv", Arch, "couch_collate.so"]),
                     ["c_src/*.c"]}]},
-            {pre_hooks, [{compile, "./build_icu.sh"}]},
-            {post_hooks, [{clean, "./build_icu.sh clean"}]}],
+            {pre_hooks, [
+                {"(linux|solaris|freebsd|netbsd|openbsd|dragonfly|darwin)",
+                    compile, "./build_icu.sh"},
+                {"(win32|win64)", compile,
+                    "powershell ./build_icu.ps1"}
+            ]},
+            {post_hooks, [
+                {"(linux|solaris|freebsd|netbsd|openbsd|dragonfly|darwin)",
+                    clean, "./build_icu.sh clean"},
+                {"(win32|win64)", clean,
+                    "powershell ./build_icu.ps1 -clean"}
+            ]}
+           ],
 
 lists:keymerge(1,lists:keysort(1, PortInfo), lists:keysort(1, CONFIG)).
